@@ -1,21 +1,31 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:floating_clock/l10n/app_localizations.dart';
 import 'package:floating_clock/main.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  testWidgets('home page renders clock controls', (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('home page renders clock controls in English', (WidgetTester tester) async {
+    final localeManager = LocaleManager();
+    await localeManager.setLanguage(AppLanguage.en);
+
+    await tester.pumpWidget(MyApp(localeManager: localeManager));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Floating Clock'), findsOneWidget);
+    expect(find.text('Time Sources'), findsOneWidget);
+    expect(find.text('Start Floating'), findsOneWidget);
+    expect(find.text('PiP'), findsOneWidget);
+  });
+
+  testWidgets('home page renders clock controls in Chinese', (WidgetTester tester) async {
+    final localeManager = LocaleManager();
+    await localeManager.setLanguage(AppLanguage.zh);
+
+    await tester.pumpWidget(MyApp(localeManager: localeManager));
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('悬浮时间'), findsOneWidget);

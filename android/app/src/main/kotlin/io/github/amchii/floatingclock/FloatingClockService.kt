@@ -87,7 +87,8 @@ class FloatingClockService : Service() {
     private fun startForegroundWithNotification() {
         val channelId = "floating_clock_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "悬浮时间", NotificationManager.IMPORTANCE_LOW)
+            val channelName = getString(R.string.notification_channel_name)
+            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
             val nm = getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(channel)
         }
@@ -97,8 +98,8 @@ class FloatingClockService : Service() {
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingFlags)
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("悬浮时间")
-            .setContentText("悬浮时间正在运行")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notification_running_desc))
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

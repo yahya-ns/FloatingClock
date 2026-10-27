@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:floating_clock/l10n/app_localizations.dart';
 import 'package:floating_clock/pages/about_page.dart';
 import 'package:floating_clock/models/time_precision.dart';
 import 'package:floating_clock/models/time_source.dart';
@@ -31,18 +32,37 @@ const String _fractionColorPrefKey = 'fraction_color';
 
 class _FractionColorOption {
   final String key;
-  final String label;
   final Color color;
-  const _FractionColorOption(this.key, this.label, this.color);
+  const _FractionColorOption(this.key, this.color);
 }
 
 const List<_FractionColorOption> _fractionColorOptions = [
-  _FractionColorOption('deep_red', '暗红', Color(0xFFC62828)),
-  _FractionColorOption('amber', '琥珀', Color(0xFFEF6C00)),
-  _FractionColorOption('teal', '青绿', Color(0xFF00796B)),
-  _FractionColorOption('indigo', '靛蓝', Color(0xFF3949AB)),
-  _FractionColorOption('purple', '紫罗兰', Color(0xFF8E24AA)),
+  _FractionColorOption('deep_red', Color(0xFFC62828)),
+  _FractionColorOption('amber', Color(0xFFEF6C00)),
+  _FractionColorOption('teal', Color(0xFF00796B)),
+  _FractionColorOption('indigo', Color(0xFF3949AB)),
+  _FractionColorOption('purple', Color(0xFF8E24AA)),
 ];
+
+String _displayNameForSource(TimeSource s, AppLocalizations l10n) {
+  if (s.isSystem) {
+    return l10n.systemTime;
+  }
+  if (s.host == _presetNtpAliyun ||
+      s.host == _presetNtpTencent ||
+      s.host == _presetHttpMeituan) {
+    if (s.alias.isEmpty ||
+        s.alias == '阿里云' ||
+        s.alias == 'Aliyun' ||
+        s.alias == '腾讯' ||
+        s.alias == 'Tencent' ||
+        s.alias == '美团' ||
+        s.alias == 'Meituan') {
+      return l10n.getPresetAlias(s.host);
+    }
+  }
+  return s.alias.isNotEmpty ? s.alias : s.host;
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -216,7 +236,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _removeSyncOverlay();
 
     final s = _sources[index];
-    final text = _formatLastSync(s.lastSync);
+    final text = _formatLastSync(s.lastSync, AppLocalizations.of(context));
 
     // Measure text to compute tooltip size
     final tp = TextPainter(
@@ -389,9 +409,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _enterPictureInPicture() async {
+    final l10n = AppLocalizations.of(context);
     if (!_pipSupported) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('当前设备不支持画中画模式')));
+          .showSnackBar(SnackBar(content: Text(l10n.pipNotSupported)));
       return;
     }
     if (_overlayRunning) {
@@ -406,13 +427,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (entered != null && !entered) {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('无法进入画中画模式，请检查系统设置')));
+            .showSnackBar(SnackBar(content: Text(l10n.pipSettingsError)));
       }
     } on PlatformException catch (e) {
       debugPrint('enterPiP failed: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('进入画中画失败')));
+          .showSnackBar(SnackBar(content: Text(l10n.pipFailed)));
     }
   }
 
@@ -657,8 +678,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (!has) {
         await _channel.invokeMethod('requestPermission');
         if (!mounted) return false;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('请在系统设置允许“悬浮窗/在其他应用上层显示”权限后再次点击开始'),
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n.overlayPermissionNotice),
         ));
         return false;
       }
@@ -711,27 +733,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void _addServerDialog() {
+    final l10n = AppLocalizations.of(context);
     final controllerHost = TextEditingController(text: 'ntp.aliyun.com');
     final controllerAlias = TextEditingController(text: '');
     showDialog<void>(
         context: context,
         builder: (ctx) {
           return AlertDialog(
-            title: const Text('添加 NTP 服务器'),
+            title: Text(l10n.addNtpServer),
             content: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
                   controller: controllerHost,
-                  decoration: const InputDecoration(
-                      hintText: 'ntp.example.com', labelText: '主机')),
+                  decoration: InputDecoration(
+                      hintText: l10n.hostHint, labelText: l10n.host)),
               TextField(
                   controller: controllerAlias,
-                  decoration:
-                      const InputDecoration(hintText: '可选别名', labelText: '别名')),
+                  decoration: InputDecoration(
+                      hintText: l10n.aliasHint, labelText: l10n.alias)),
             ]),
             actions: [
               TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('取消')),
+                  child: Text(l10n.cancel)),
               TextButton(
                   onPressed: () async {
                     final host = controllerHost.text.trim();
@@ -743,10 +766,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           barrierDismissible: false,
                           builder: (_) {
                             return AlertDialog(
-                                content: Row(children: const [
-                              CircularProgressIndicator(),
-                              SizedBox(width: 12),
-                              Text('正在测试 NTP 服务器...')
+                                content: Row(children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(width: 12),
+                              Text(l10n.testingNtp)
                             ]));
                           });
 
@@ -764,7 +787,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       if (off == null) {
                         // Don't add silently if the server failed — inform the user and keep the dialog open.
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('无法从 $host 获取 NTP 时间，请检查主机或网络')));
+                            content: Text(l10n.ntpFailed(host))));
                         return;
                       }
 
@@ -780,13 +803,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       Navigator.of(context).pop();
                     }
                   },
-                  child: const Text('添加')),
+                  child: Text(l10n.add)),
             ],
           );
         });
   }
 
   void _editServerDialog(int index) {
+    final l10n = AppLocalizations.of(context);
     final s = _sources[index];
     final controllerHost = TextEditingController(text: s.host);
     final controllerAlias = TextEditingController(text: s.alias);
@@ -794,21 +818,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         context: context,
         builder: (ctx) {
           return AlertDialog(
-            title: const Text('编辑 NTP 服务器'),
+            title: Text(l10n.editNtpServer),
             content: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
                   controller: controllerHost,
-                  decoration: const InputDecoration(
-                      hintText: 'ntp.example.com', labelText: '主机')),
+                  decoration: InputDecoration(
+                      hintText: l10n.hostHint, labelText: l10n.host)),
               TextField(
                   controller: controllerAlias,
-                  decoration:
-                      const InputDecoration(hintText: '可选别名', labelText: '别名')),
+                  decoration: InputDecoration(
+                      hintText: l10n.aliasHint, labelText: l10n.alias)),
             ]),
             actions: [
               TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('取消')),
+                  child: Text(l10n.cancel)),
               TextButton(
                   onPressed: () async {
                     final host = controllerHost.text.trim();
@@ -820,10 +844,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           barrierDismissible: false,
                           builder: (_) {
                             return AlertDialog(
-                                content: Row(children: const [
-                              CircularProgressIndicator(),
-                              SizedBox(width: 12),
-                              Text('正在测试 NTP 服务器...')
+                                content: Row(children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(width: 12),
+                              Text(l10n.testingNtp)
                             ]));
                           });
 
@@ -841,7 +865,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       if (off == null) {
                         // Keep the edit dialog open and report the failure
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('无法从 $host 获取 NTP 时间，请检查主机或网络')));
+                            content: Text(l10n.ntpFailed(host))));
                         return;
                       }
 
@@ -858,7 +882,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       Navigator.of(context).pop();
                     }
                   },
-                  child: const Text('保存')),
+                  child: Text(l10n.save)),
             ],
           );
         });
@@ -874,19 +898,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return (prefix: prefix, fraction: fraction);
   }
 
-  String _precisionLabel(TimePrecision precision) {
+  String _precisionLabel(TimePrecision precision, AppLocalizations l10n) {
     switch (precision) {
       case TimePrecision.centisecond:
-        return '0.01 秒';
+        return l10n.precisionCentisecond;
       case TimePrecision.decisecond:
-        return '0.1 秒';
+        return l10n.precisionDecisecond;
     }
   }
 
-  String _formatLastSync(DateTime? dt) {
+  String _formatLastSync(DateTime? dt, AppLocalizations l10n) {
     if (dt == null) return '';
     final d = dt.toLocal();
-    return '最近同步: ${d.year}-${_twoDigits(d.month)}-${_twoDigits(d.day)} ${_twoDigits(d.hour)}:${_twoDigits(d.minute)}:${_twoDigits(d.second)}';
+    final timeStr =
+        '${d.year}-${_twoDigits(d.month)}-${_twoDigits(d.day)} ${_twoDigits(d.hour)}:${_twoDigits(d.minute)}:${_twoDigits(d.second)}';
+    return l10n.lastSynced(timeStr);
   }
 
   String _twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -1021,6 +1047,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void _restorePresetsDialog() {
+    final l10n = AppLocalizations.of(context);
     final missing = <String>[];
     if (!_sources.any((s) => s.host == _presetNtpAliyun)) {
       missing.add(_presetNtpAliyun);
@@ -1034,30 +1061,66 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     if (missing.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('没有缺失的预设需要恢复')));
+          .showSnackBar(SnackBar(content: Text(l10n.noMissingPresets)));
       return;
     }
 
     showDialog<void>(
         context: context,
         builder: (ctx) {
+          final missingList =
+              missing.map((h) => l10n.getPresetAlias(h)).join(', ');
           return AlertDialog(
-            title: const Text('恢复预设源'),
-            content: Text(
-                '将恢复以下预设: ${missing.map((h) => _presetAliases[h] ?? h).join(', ')}'),
+            title: Text(l10n.restorePresetsTitle),
+            content: Text(l10n.restorePresetsConfirm(missingList)),
             actions: [
               TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('取消')),
+                  child: Text(l10n.cancel)),
               TextButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
                     _restorePresets();
                   },
-                  child: const Text('恢复')),
+                  child: Text(l10n.restore)),
             ],
           );
         });
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final localeManager = LocaleScope.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(l10n.language),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: AppLanguage.values.map((lang) {
+              return RadioListTile<AppLanguage>(
+                title: Text(lang.label(l10n)),
+                value: lang,
+                groupValue: localeManager.currentLanguage,
+                onChanged: (val) {
+                  if (val != null) {
+                    localeManager.setLanguage(val);
+                    Navigator.of(ctx).pop();
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(l10n.cancel),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _restorePresets() async {
@@ -1118,6 +1181,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     if (_isInPiP) {
       final TimeSource source;
       if (_sources.isEmpty) {
@@ -1128,9 +1193,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         if (idx >= _sources.length) idx = _sources.length - 1;
         source = _sources[idx];
       }
-      final label = source.isSystem
-          ? '系统时间'
-          : (source.alias.isNotEmpty ? source.alias : source.host);
+      final label = _displayNameForSource(source, l10n);
       return Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -1173,17 +1236,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('悬浮时间'),
+        title: Text(l10n.appName),
         actions: [
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'about') {
                 Navigator.of(context)
                     .push(MaterialPageRoute(builder: (_) => const AboutPage()));
+              } else if (v == 'language') {
+                _showLanguageDialog(context);
               }
             },
-            itemBuilder: (ctx) => const [
-              PopupMenuItem(value: 'about', child: Text('关于')),
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'language',
+                child: Row(
+                  children: [
+                    const Icon(Icons.language, size: 20, color: Colors.black87),
+                    const SizedBox(width: 8),
+                    Text(l10n.language),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'about',
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 20, color: Colors.black87),
+                    const SizedBox(width: 8),
+                    Text(l10n.about),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -1198,7 +1282,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   child: Column(
                     children: [
                       ListTile(
-                        title: const Text('时间源'),
+                        title: Text(l10n.timeSources),
                         trailing:
                             Row(mainAxisSize: MainAxisSize.min, children: [
                           IconButton(
@@ -1206,7 +1290,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               onPressed: _addServerDialog),
                           IconButton(
                               icon: const Icon(Icons.restore),
-                              tooltip: '恢复预设源',
+                              tooltip: l10n.restorePresets,
                               onPressed: _restorePresetsDialog),
                         ]),
                       ),
@@ -1219,7 +1303,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                const Text('显示精度'),
+                                Text(l10n.displayPrecision),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Align(
@@ -1251,7 +1335,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                       MaterialTapTargetSize
                                                           .shrinkWrap,
                                                 ),
-                                                Text(_precisionLabel(p)),
+                                                Text(_precisionLabel(p, l10n)),
                                               ],
                                             ),
                                           );
@@ -1266,7 +1350,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                const Text('小数颜色'),
+                                Text(l10n.fractionColor),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Align(
@@ -1295,7 +1379,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                 shape: BoxShape
                                                                     .circle),
                                                       ),
-                                                      Text(option.label),
+                                                      Text(l10n.colorName(option.key)),
                                                     ],
                                                   ),
                                                 ))
@@ -1346,9 +1430,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   value: index,
                                 ),
                                 title: Text(
-                                  s.isSystem
-                                      ? 'System'
-                                      : (s.alias.isNotEmpty ? s.alias : s.host),
+                                  _displayNameForSource(s, l10n),
                                   style: const TextStyle(
                                     fontFeatures: [
                                       FontFeature.tabularFigures()
@@ -1540,12 +1622,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           children: [
                             ElevatedButton(
                                 onPressed: _toggleOverlay,
-                                child: Text(_overlayRunning ? '停止悬浮' : '开始悬浮')),
+                                child: Text(_overlayRunning
+                                    ? l10n.stopFloating
+                                    : l10n.startFloating)),
                             ElevatedButton(
                                 onPressed: _pipSupported
                                     ? _enterPictureInPicture
                                     : null,
-                                child: const Text('画中画')),
+                                child: Text(l10n.pip)),
                           ],
                         ),
                       ),

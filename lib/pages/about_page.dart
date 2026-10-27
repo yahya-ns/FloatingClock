@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, MethodChannel;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:floating_clock/l10n/app_localizations.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -12,7 +13,6 @@ class AboutPage extends StatefulWidget {
 }
 
 class _AboutPageState extends State<AboutPage> {
-  final String _appName = '悬浮时间';
   String _version = '';
   final String _repoUrl = 'https://github.com/amchii/FloatingClock';
   bool _loading = false;
@@ -64,35 +64,37 @@ class _AboutPageState extends State<AboutPage> {
     }
   }
 
-  Future<void> _openRepo() async {
+  Future<void> _openRepo(AppLocalizations l10n) async {
     final uri = Uri.parse(_repoUrl);
     try {
       final can = await canLaunchUrl(uri);
       if (!can) {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('无法打开链接')));
+            .showSnackBar(SnackBar(content: Text(l10n.cannotOpenLink)));
         return;
       }
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('无法打开链接')));
+          .showSnackBar(SnackBar(content: Text(l10n.cannotOpenLink)));
     }
   }
 
-  void _copyRepo() {
+  void _copyRepo(AppLocalizations l10n) {
     Clipboard.setData(ClipboardData(text: _repoUrl)).then((_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('仓库地址已复制到剪贴板')));
+          .showSnackBar(SnackBar(content: Text(l10n.repoCopied)));
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final displayedVersion = _version.isNotEmpty ? _version : '未知';
+    final l10n = AppLocalizations.of(context);
+    final localeManager = LocaleScope.of(context);
+    final displayedVersion = _version.isNotEmpty ? _version : l10n.versionUnknown;
 
     final iconWidget = ClipOval(
       child: _iconBytes != null
@@ -111,51 +113,89 @@ class _AboutPageState extends State<AboutPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('关于')),
+      appBar: AppBar(title: Text(l10n.about)),
       body: Center(
-        child: Card(
-          elevation: 6,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 应用图标：优先从平台读取已安装应用的 launcher 图标，失败时使用本地资产回退
-                iconWidget,
-                const SizedBox(height: 12),
-                Text(_appName,
-                    style:
-                        const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                if (_loading)
-                  const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                if (!_loading)
-                  Text('版本 $displayedVersion',
-                      style: TextStyle(color: Colors.grey[700])),
-                const SizedBox(height: 12),
-                const Text('一个显示并同步时间的悬浮窗应用。',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.black54)),
-                const SizedBox(height: 18),
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  ElevatedButton.icon(
-                    onPressed: _openRepo,
-                    icon: const Icon(Icons.open_in_new),
-                    label: const Text('打开仓库'),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Card(
+            elevation: 6,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  iconWidget,
+                  const SizedBox(height: 12),
+                  Text(l10n.appName,
+                      style:
+                          const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  if (_loading)
+                    const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  if (!_loading)
+                    Text(l10n.version(displayedVersion),
+                        style: TextStyle(color: Colors.grey[700])),
+                  const SizedBox(height: 12),
+                  Text(l10n.appDescription,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _openRepo(l10n),
+                        icon: const Icon(Icons.open_in_new),
+                        label: Text(l10n.openRepo),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _copyRepo(l10n),
+                        icon: const Icon(Icons.copy),
+                        label: Text(l10n.copyRepo),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: _copyRepo,
-                    icon: const Icon(Icons.copy),
-                    label: const Text('复制地址'),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.language, color: Colors.blueGrey, size: 20),
+                          const SizedBox(width: 8),
+                          Text(l10n.language,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      DropdownButton<AppLanguage>(
+                        value: localeManager.currentLanguage,
+                        underline: const SizedBox(),
+                        items: AppLanguage.values.map((lang) {
+                          return DropdownMenuItem(
+                            value: lang,
+                            child: Text(lang.label(l10n)),
+                          );
+                        }).toList(),
+                        onChanged: (lang) {
+                          if (lang != null) {
+                            localeManager.setLanguage(lang);
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                ]),
-              ],
+                ],
+              ),
             ),
           ),
         ),

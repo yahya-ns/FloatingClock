@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">悬浮时间</string>
+    <string name="notification_channel_name">悬浮时间</string>
+    <string name="notification_running_desc">悬浮时间正在运行</string>
+</resources>

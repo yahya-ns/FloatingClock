@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Floating Clock</string>
+    <string name="notification_channel_name">Floating Clock</string>
+    <string name="notification_running_desc">Floating Clock is running</string>
+</resources>
