@@ -40,7 +40,7 @@ jobs:
           channel: stable
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v4
 
       - name: Flutter pub get
         run: flutter pub get
