@@ -1,4 +1,4 @@
-# 一个使用Flutter编写的应用
+# FloatingClock - Flutter Application
 # Repository Guidelines
 
 ## Project Structure & Module Organization
@@ -37,7 +37,8 @@
 - Never commit secrets. Use local env or encrypted secrets via CI.
 - `secrets/` is for local development only and should remain out of VCS.
 
+## Platform Target
+Jika tidak ada catatan khusus, 'Aplikasi'/'App' merujuk pada Android APK (saat ini difokuskan pada platform Android).
 
-## 若无特别说明：'应用'/'App' 均指的是Android APK，当前仅考虑Android平台。
-
-## 使用简体中文与我交流
+## Bahasa Komunikasi
+Gunakan Bahasa Indonesia dalam percakapan.

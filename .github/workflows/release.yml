@@ -83,8 +83,7 @@ jobs:
 
       - name: Build release APK
         run: |
-          flutter build apk --release --split-per-abi --android-skip-build-dependency-validation
-          flutter build apk --release --android-skip-build-dependency-validation
+          flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols --android-skip-build-dependency-validation
 
       - name: Clean up sensitive files
         if: always()
@@ -97,6 +96,13 @@ jobs:
           name: app-release-apk
           path: build/app/outputs/apk/release/
           retention-days: 1  # 只保留1天，节省存储空间
+
+      - name: Upload debug symbols artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-symbols
+          path: build/symbols/
+          retention-days: 7
 
   release:
     name: Create Release
