@@ -6,6 +6,11 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
+# Flutter Deferred Components (Google Play Core not bundled)
+-dontwarn com.google.android.play.core.**
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+-dontwarn io.flutter.**
+
 # Keep application code and services
 -keep class io.github.amchii.floatingclock.** { *; }
 
