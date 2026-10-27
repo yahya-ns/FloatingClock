@@ -22,6 +22,17 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.namespace == "com.android") {
+                useModule("com.android.tools.build:gradle:8.7.3")
+            }
+            if (requested.id.id == "kotlin-android" || requested.id.id == "org.jetbrains.kotlin.android") {
+                useModule("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
+            }
+        }
+    }
 }
 
 dependencyResolutionManagement {
