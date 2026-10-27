@@ -83,8 +83,8 @@ jobs:
 
       - name: Build release APK
         run: |
-          flutter build apk --release --split-per-abi
-          flutter build apk --release
+          flutter build apk --release --split-per-abi --android-skip-build-dependency-validation
+          flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Clean up sensitive files
         if: always()
