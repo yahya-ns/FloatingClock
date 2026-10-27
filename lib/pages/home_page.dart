@@ -11,21 +11,25 @@ import 'package:floating_clock/models/time_precision.dart';
 import 'package:floating_clock/models/time_source.dart';
 
 // Preset/source identifiers and defaults
-const String _presetNtpAliyun = 'ntp.aliyun.com';
-const String _presetNtpTencent = 'ntp.tencent.com';
-const String _presetHttpMeituan =
-    'https://cube.meituan.com/ipromotion/cube/toc/component/base/getServerCurrentTime';
+const String _presetNtpIdPool = 'id.pool.ntp.org';
+const String _presetNtpGoogle = 'time.google.com';
+const String _presetNtpCloudflare = 'time.cloudflare.com';
+const String _presetNtpPool = 'pool.ntp.org';
 
 const Map<String, String> _presetAliases = {
-  _presetNtpAliyun: '阿里云',
-  _presetNtpTencent: '腾讯',
-  _presetHttpMeituan: '美团',
+  _presetNtpIdPool: 'NTP Pool Indonesia',
+  _presetNtpGoogle: 'Google NTP',
+  _presetNtpCloudflare: 'Cloudflare NTP',
+  _presetNtpPool: 'Global Pool NTP',
 };
 
-const Map<String, String> _meituanDefaultHeaders = {
-  'User-Agent':
-      'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36'
+// Legacy Chinese preset hosts to clean up on upgrade
+const Set<String> _legacyPresetHosts = {
+  'ntp.aliyun.com',
+  'ntp.tencent.com',
+  'https://cube.meituan.com/ipromotion/cube/toc/component/base/getServerCurrentTime',
 };
+
 const String _timeSourcesKey = 'time_sources_json';
 const String _precisionPrefKey = 'time_precision';
 const String _fractionColorPrefKey = 'fraction_color';
@@ -48,10 +52,16 @@ String _displayNameForSource(TimeSource s, AppLocalizations l10n) {
   if (s.isSystem) {
     return l10n.systemTime;
   }
-  if (s.host == _presetNtpAliyun ||
-      s.host == _presetNtpTencent ||
-      s.host == _presetHttpMeituan) {
+  if (_presetAliases.containsKey(s.host) || _legacyPresetHosts.contains(s.host)) {
     if (s.alias.isEmpty ||
+        s.alias == 'NTP Pool Indonesia' ||
+        s.alias == 'ID Pool' ||
+        s.alias == 'Google' ||
+        s.alias == 'Google NTP' ||
+        s.alias == 'Cloudflare' ||
+        s.alias == 'Cloudflare NTP' ||
+        s.alias == 'Global Pool NTP' ||
+        s.alias == 'Pool NTP' ||
         s.alias == '阿里云' ||
         s.alias == 'Aliyun' ||
         s.alias == '腾讯' ||
@@ -107,20 +117,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // are present unless the user explicitly hid them.
     _loadSavedServers().then((_) {
       final presets = <TimeSource>[
-        TimeSource.ntp(_presetNtpAliyun,
-            alias: _presetAliases[_presetNtpAliyun] ?? ''),
-        TimeSource.ntp(_presetNtpTencent,
-            alias: _presetAliases[_presetNtpTencent] ?? ''),
-        TimeSource.http(_presetHttpMeituan,
-            alias: _presetAliases[_presetHttpMeituan] ?? '',
-            headers: _meituanDefaultHeaders),
+        TimeSource.ntp(_presetNtpIdPool,
+            alias: _presetAliases[_presetNtpIdPool] ?? ''),
+        TimeSource.ntp(_presetNtpGoogle,
+            alias: _presetAliases[_presetNtpGoogle] ?? ''),
+        TimeSource.ntp(_presetNtpCloudflare,
+            alias: _presetAliases[_presetNtpCloudflare] ?? ''),
+        TimeSource.ntp(_presetNtpPool,
+            alias: _presetAliases[_presetNtpPool] ?? ''),
       ];
 
+      bool hasNewPreset = false;
       for (final preset in presets) {
         if (_hiddenPresets.contains(preset.host)) continue;
         final exists =
             _sources.any((s) => s.host == preset.host && s.type == preset.type);
         if (!exists) {
+          hasNewPreset = true;
           setState(() => _sources.add(preset));
 
           // Try an immediate initial sync for the restored preset.
@@ -136,20 +149,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 });
               }
             });
-          } else if (preset.type == TimeSourceType.http) {
-            _queryHttpOffset(preset).then((off) {
-              if (off != null) {
-                if (!mounted) return;
-                setState(() {
-                  final s = _sources.firstWhere((x) => x.host == preset.host,
-                      orElse: () => _sources.last);
-                  s.offsetMillis = off;
-                  s.lastSync = DateTime.now();
-                });
-              }
-            });
           }
         }
+      }
+
+      if (hasNewPreset) {
+        _saveServers();
       }
 
       _restartUiTimer();
@@ -734,7 +739,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   void _addServerDialog() {
     final l10n = AppLocalizations.of(context);
-    final controllerHost = TextEditingController(text: 'ntp.aliyun.com');
+    final controllerHost = TextEditingController(text: 'id.pool.ntp.org');
     final controllerAlias = TextEditingController(text: '');
     showDialog<void>(
         context: context,
@@ -999,6 +1004,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _hiddenPresets = <String>{};
         }
       }
+
+      // If legacy Chinese presets were previously stored, clean them up
+      bool legacyRemoved = false;
+      _sources.removeWhere((s) {
+        if (_legacyPresetHosts.contains(s.host)) {
+          legacyRemoved = true;
+          return true;
+        }
+        return false;
+      });
+      if (legacyRemoved) {
+        _hiddenPresets.removeAll(_legacyPresetHosts);
+        _saveServers();
+        _saveHiddenPresets();
+      }
     } catch (e) {
       // ignore
     }
@@ -1041,22 +1061,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   bool _isPresetHost(String host) {
-    return host == _presetNtpAliyun ||
-        host == _presetNtpTencent ||
-        host == _presetHttpMeituan;
+    return _presetAliases.containsKey(host);
   }
 
   void _restorePresetsDialog() {
     final l10n = AppLocalizations.of(context);
     final missing = <String>[];
-    if (!_sources.any((s) => s.host == _presetNtpAliyun)) {
-      missing.add(_presetNtpAliyun);
-    }
-    if (!_sources.any((s) => s.host == _presetNtpTencent)) {
-      missing.add(_presetNtpTencent);
-    }
-    if (!_sources.any((s) => s.host == _presetHttpMeituan)) {
-      missing.add(_presetHttpMeituan);
+    for (final host in _presetAliases.keys) {
+      if (!_sources.any((s) => s.host == host)) {
+        missing.add(host);
+      }
     }
 
     if (missing.isEmpty) {
@@ -1125,18 +1139,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _restorePresets() async {
     final toAdd = <TimeSource>[];
-    if (!_sources.any((s) => s.host == _presetNtpAliyun)) {
-      toAdd.add(TimeSource.ntp(_presetNtpAliyun,
-          alias: _presetAliases[_presetNtpAliyun] ?? ''));
-    }
-    if (!_sources.any((s) => s.host == _presetNtpTencent)) {
-      toAdd.add(TimeSource.ntp(_presetNtpTencent,
-          alias: _presetAliases[_presetNtpTencent] ?? ''));
-    }
-    if (!_sources.any((s) => s.host == _presetHttpMeituan)) {
-      toAdd.add(TimeSource.http(_presetHttpMeituan,
-          alias: _presetAliases[_presetHttpMeituan] ?? '',
-          headers: _meituanDefaultHeaders));
+    for (final entry in _presetAliases.entries) {
+      if (!_sources.any((s) => s.host == entry.key)) {
+        toAdd.add(TimeSource.ntp(entry.key, alias: entry.value));
+      }
     }
 
     if (toAdd.isEmpty) return;
@@ -1156,15 +1162,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     for (final s in toAdd) {
       if (s.type == TimeSourceType.ntp) {
         final off = await _queryNtpOffset(s.host);
-        if (off != null) {
-          setState(() {
-            final ts = _sources.firstWhere((x) => x.host == s.host);
-            ts.offsetMillis = off;
-            ts.lastSync = DateTime.now();
-          });
-        }
-      } else if (s.type == TimeSourceType.http) {
-        final off = await _queryHttpOffset(s);
         if (off != null) {
           setState(() {
             final ts = _sources.firstWhere((x) => x.host == s.host);

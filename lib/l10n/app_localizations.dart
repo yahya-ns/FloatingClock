@@ -110,7 +110,15 @@ class AppLocalizations {
 
   // Preset Source Aliases
   String getPresetAlias(String host) {
-    if (host == 'ntp.aliyun.com') {
+    if (host == 'id.pool.ntp.org') {
+      return isZh ? '印尼 NTP 池' : 'NTP Pool Indonesia';
+    } else if (host == 'time.google.com') {
+      return isZh ? '谷歌 NTP' : 'Google NTP';
+    } else if (host == 'time.cloudflare.com') {
+      return 'Cloudflare NTP';
+    } else if (host == 'pool.ntp.org') {
+      return isZh ? '全球 NTP 池' : 'Global Pool NTP';
+    } else if (host == 'ntp.aliyun.com') {
       return isZh ? '阿里云' : 'Aliyun';
     } else if (host == 'ntp.tencent.com') {
       return isZh ? '腾讯' : 'Tencent';
@@ -146,7 +154,7 @@ class AppLocalizations {
   String get addNtpServer => isZh ? '添加 NTP 服务器' : 'Add NTP Server';
   String get editNtpServer => isZh ? '编辑 NTP 服务器' : 'Edit NTP Server';
   String get host => isZh ? '主机' : 'Host';
-  String get hostHint => 'ntp.example.com';
+  String get hostHint => 'id.pool.ntp.org';
   String get alias => isZh ? '别名' : 'Alias';
   String get aliasHint => isZh ? '可选别名' : 'Optional alias';
   String get cancel => isZh ? '取消' : 'Cancel';
