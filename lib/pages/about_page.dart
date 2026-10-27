@@ -14,7 +14,7 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   String _version = '';
-  final String _repoUrl = 'https://github.com/amchii/FloatingClock';
+  final String _repoUrl = 'https://github.com/yahya-ns/FloatingClock';
   bool _loading = false;
   Uint8List? _iconBytes;
   final ImageProvider _fallbackIcon = const AssetImage('assets/app_icon.webp');
